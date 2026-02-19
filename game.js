@@ -26,12 +26,12 @@
         "EN UZUN OYUNCU ODULU SENIN 🏆"];
     var msgUsed = [];
     var LNAMES = ["KOLAY GORUNUYOR DEGIL MI?", "HAREKET ETMEYI SEV", "BOMBA SEVIYOR MUSUN?",
-        "GRAVITY? NEVER HEARD OF HER", "SON BOSS: HERSEY", "NEREDEYSE...", "LABIRENT CEHENNEM",
+        "GRAVITY? NEVER HEARD OF HER", "SON BOSS: HERSEY", "NEREDEYSE...", "DIKEN LABIRENT",
         "TAVAN SORUNU", "ISIK YOK", "KOSU BANDI", "SAHTE YARDIM", "KUCULEN DUNYA",
         "KOPYA KARAKTERI", "GERI SAY", "SON LEVEL"];
     var LTROLLS = ["ZEMIN MI? HANGI ZEMIN? 😂", "KONTROLLER TERS OLDU 😈",
         "DIKKATLI OL... YA DA OLMA 💣", "YUKARI MI ASAGI MI? 😵", "SIKE! ONE MORE... 😈",
-        "NEREDEYSE 😂", "GUVENLI DEDIM MI? 🤔", "LABIRENTTEN CIKAMAYACAKSIN 🌀", "KARANLIK GUZEL DEGIL MI? 🌑",
+        "NEREDEYSE 😂", "UC KORIDOR... BASIT 😇", "TAVAN DUSUYOOR 😱", "KARANLIK GUZEL DEGIL MI? 🌑",
         "RUZGAR YARDIM EDIYOR, SEN KARSI KOYUYORSUN 😂💨", "OKU TAKIP ET 😇➡️", "YER DARALIYOOR 😬",
         "HANGISI SENSIN? 👥", "SAYDIM BITTI 💣", "BU LEVEL BITMEZ. ASLA. 👹"];
     var canvas = document.getElementById("gameCanvas"), ctx = canvas.getContext("2d"),
@@ -52,9 +52,8 @@
     var isBonus = false, fakeWinShown = false, fakeWinT = 0, deathT = 0, trollT = 0;
     // L6: floor disappear near flag
     var l6floorGone = false;
-    // L7: maze
-    var l7traps = [], l7ceilMove = false, l7ceilY2 = 0, l7ceilTimer = 0;
-    var l7wallUp = false, l7wallY = 400, l7trollC2 = false, l7trollC3 = false, l7trollC4 = false, l7shrink = false;
+    // L7: spike labyrinth
+    var l7spikeTraps = [], l7troll1 = false, l7troll2 = false, l7fakeWall = false;
     // L8: ceiling drop
     var l8ceilDrop = false, l8ceilY = -20, l8gapX = 0;
     // L9: darkness
@@ -158,15 +157,14 @@
         };
     }
     function getSpawn() {
-        if (curLvl === 6 && !isBonus) return { x: 40, y: 54 };
+        if (curLvl === 6 && !isBonus) return { x: 50, y: 170 };
         return isBonus ? { x: 40, y: 380 } : { x: 40, y: 380 };
     }
     // Level building
     function loadLvl(n) {
         plats = []; spikes = []; fakePlats = []; movPlats = []; tramps = []; hidSpikes = []; bombs = []; explosions = []; flag = {};
         ctrlRev = false; ctrlRevT = 0; gravFlip = false; gravFlipT = 4; gravWarn = false; bombT = 2;
-        windForce = 0; l6floorGone = false; l7traps = []; l7ceilMove = false; l7ceilY2 = 0; l7ceilTimer = 0;
-        l7wallUp = false; l7wallY = 400; l7trollC2 = false; l7trollC3 = false; l7trollC4 = false; l7shrink = false;
+        windForce = 0; l6floorGone = false; l7spikeTraps = []; l7troll1 = false; l7troll2 = false; l7fakeWall = false;
         l8ceilDrop = false; l8ceilY = -20;
         l9dark = false; l9timer = 0; l9lightBack = false; shrinkT = 0; shrinkAmt = 0; cloneActive = false;
         l14timer = 10; l14bombDropped = false; l14timerDone = false; l15blackoutT = 0; l15blackOn = false;
@@ -248,73 +246,56 @@
         plats.push({ x: 350, y: 180, w: 40, h: 15 });
         flag = { x: 700, y: 170, w: 20, h: 30 }; l6floorGone = false;
     }
-    // L7: Maze — LABIRENT CEHENNEM
+    // L7: DIKEN LABIRENT — 3 corridor zigzag with spike traps
     function bL7() {
-        // Corridor 1 (top): go RIGHT, ceiling y=10, floor y=85
-        plats.push({ x: 0, y: 10, w: 800, h: 15 }); // ceiling
-        plats.push({ x: 0, y: 85, w: 740, h: 15 }); // floor with hole
-        plats.push({ x: 780, y: 85, w: 20, h: 15 }); // right ledge
-        // Right wall corridor 1
-        plats.push({ x: 785, y: 10, w: 15, h: 75 });
-        // Spikes under hole between C1 and C2
-        spikes.push({ x: 745, y: 97, w: 16, h: 15 }); spikes.push({ x: 763, y: 97, w: 16, h: 15 });
-        // Floor traps in corridor 1
-        l7traps.push({ x: 200, y: 70, w: 50, h: 15, standT: 0, gone: false, respT: 0 });
-        l7traps.push({ x: 400, y: 70, w: 50, h: 15, standT: 0, gone: false, respT: 0 });
-        l7traps.push({ x: 580, y: 70, w: 50, h: 15, standT: 0, gone: false, respT: 0 });
-        // Spikes under trap tiles in C1
-        spikes.push({ x: 200, y: 97, w: 16, h: 15 }); spikes.push({ x: 230, y: 97, w: 16, h: 15 });
-        spikes.push({ x: 400, y: 97, w: 16, h: 15 }); spikes.push({ x: 430, y: 97, w: 16, h: 15 });
-        spikes.push({ x: 580, y: 97, w: 16, h: 15 }); spikes.push({ x: 610, y: 97, w: 16, h: 15 });
-
-        // Corridor 2: go LEFT, ceiling y=100, floor y=175
-        plats.push({ x: 0, y: 100, w: 800, h: 15 }); // ceiling (fills gap under C1 floor)
-        plats.push({ x: 60, y: 175, w: 740, h: 15 }); // floor
-        // Left wall corridor 2
-        plats.push({ x: 0, y: 100, w: 15, h: 90 });
-        // Fake exit at left end (looks like hole but has spikes below)
-        // Real exit: thin fake-looking wall at x=50 that player can walk through
-        // Spikes under fake exit
-        spikes.push({ x: 18, y: 187, w: 16, h: 15 }); spikes.push({ x: 36, y: 187, w: 16, h: 15 });
-        // Floor traps in corridor 2
-        l7traps.push({ x: 600, y: 160, w: 50, h: 15, standT: 0, gone: false, respT: 0 });
-        l7traps.push({ x: 350, y: 160, w: 50, h: 15, standT: 0, gone: false, respT: 0 });
-        l7traps.push({ x: 150, y: 160, w: 50, h: 15, standT: 0, gone: false, respT: 0 });
-        // Spikes under C2 traps
-        spikes.push({ x: 600, y: 187, w: 16, h: 15 }); spikes.push({ x: 630, y: 187, w: 16, h: 15 });
-        spikes.push({ x: 350, y: 187, w: 16, h: 15 }); spikes.push({ x: 380, y: 187, w: 16, h: 15 });
-        spikes.push({ x: 150, y: 187, w: 16, h: 15 }); spikes.push({ x: 180, y: 187, w: 16, h: 15 });
-
-        // Corridor 3: go RIGHT, ceiling y=190, floor y=265
-        // Hidden passage from C2: gap at x=50-75 in C2 floor
-        plats.push({ x: 0, y: 190, w: 800, h: 15 }); // ceiling
-        plats.push({ x: 0, y: 265, w: 800, h: 15 }); // floor
+        // === CORRIDOR 1 (top): player goes RIGHT ===
+        // Ceiling
+        plats.push({ x: 0, y: 120, w: 800, h: 20 });
+        // Floor (with exit hole at right end: x=750..800 is open)
+        plats.push({ x: 0, y: 200, w: 750, h: 20 });
         // Left wall
-        plats.push({ x: 0, y: 190, w: 15, h: 75 });
-        // Right wall with drop hole to C4
-        plats.push({ x: 785, y: 190, w: 15, h: 75 });
-        // Floor traps in corridor 3
-        l7traps.push({ x: 300, y: 250, w: 50, h: 15, standT: 0, gone: false, respT: 0 });
-        l7traps.push({ x: 500, y: 250, w: 50, h: 15, standT: 0, gone: false, respT: 0 });
-        // Spikes under C3 traps
-        spikes.push({ x: 300, y: 277, w: 16, h: 15 }); spikes.push({ x: 330, y: 277, w: 16, h: 15 });
-        spikes.push({ x: 500, y: 277, w: 16, h: 15 }); spikes.push({ x: 530, y: 277, w: 16, h: 15 });
-        // Drop hole to C4 at right end
-        // (gap in floor at x=740-770)
+        plats.push({ x: 0, y: 120, w: 10, h: 80 });
 
-        // Corridor 4: go LEFT to flag, ceiling y=280, floor y=370
-        plats.push({ x: 0, y: 280, w: 800, h: 15 }); // ceiling
-        plats.push({ x: 0, y: 370, w: 800, h: 15 }); // floor
-        // Right wall
-        plats.push({ x: 785, y: 280, w: 15, h: 90 });
+        // === CORRIDOR 2 (middle): player goes LEFT ===
+        // Ceiling (shared with C1 floor, but C1 floor ends at x=750)
+        // From x=0 to x=750, ceiling is C1 floor (y=200). Right portion open for drop.
+        plats.push({ x: 0, y: 200, w: 750, h: 20 }); // this overlaps C1 floor, acts as C2 ceiling too
+        // Floor (with exit hole at left end: x=0..60 is open)
+        plats.push({ x: 60, y: 280, w: 740, h: 20 });
+        // Right wall for corridor 2 (closes off right side so player must go left)
+        plats.push({ x: 790, y: 200, w: 10, h: 80 });
 
-        // Flag at left end of corridor 4
-        flag = { x: 30, y: 340, w: 20, h: 30 };
+        // === CORRIDOR 3 (bottom): player goes RIGHT ===
+        // Ceiling (shared with C2 floor, but C2 floor starts at x=60)
+        // Left portion x=0..60 is open for drop from C2.
+        plats.push({ x: 60, y: 280, w: 740, h: 20 }); // overlaps C2 floor, acts as C3 ceiling too
+        // Floor
+        plats.push({ x: 60, y: 360, w: 740, h: 20 });
+        // Left wall for corridor 3
+        plats.push({ x: 60, y: 280, w: 10, h: 80 });
+        // Right wall for corridor 3
+        plats.push({ x: 790, y: 280, w: 10, h: 80 });
+        // Bottom boundary
+        plats.push({ x: 0, y: 430, w: 800, h: 20 });
 
-        // Moving ceiling anchor point (corridor 3, x=400-650)
-        l7ceilY2 = 190; l7ceilMove = false; l7ceilTimer = 0;
-        // Rising wall position (corridor 4, blocks flag)
-        l7wallY = 370; l7wallUp = false;
+        // === SPIKE TRAPS ===
+        // Each trap: x, floorY (floor surface), corridor, state machine
+        // Corridor 1 spikes (floor at y=200, spikes shoot up from floor)
+        l7spikeTraps.push({ x: 300, floorY: 200, corridor: 1, state: 'idle', timer: 0, offset: 0 });
+        l7spikeTraps.push({ x: 500, floorY: 200, corridor: 1, state: 'idle', timer: 0, offset: 1.5 });
+        // Corridor 2 spikes (floor at y=280)
+        l7spikeTraps.push({ x: 400, floorY: 280, corridor: 2, state: 'idle', timer: 0, offset: 3.0 });
+        l7spikeTraps.push({ x: 200, floorY: 280, corridor: 2, state: 'idle', timer: 0, offset: 4.5 });
+        // Corridor 3 spike (floor at y=360)
+        l7spikeTraps.push({ x: 400, floorY: 360, corridor: 3, state: 'idle', timer: 0, offset: 6.0 });
+
+        // === FLAG ===
+        flag = { x: 740, y: 330, w: 20, h: 30 };
+
+        // === TROLL STATE ===
+        l7troll1 = false;
+        l7troll2 = false;
+        l7fakeWall = false;
     }
     // L8: Ceiling drops
     function bL8() {
@@ -422,76 +403,63 @@
             plats = plats.filter(function (p) { return p.y !== 420; }); yellowFlash(); showTroll(LTROLLS[5]);
         }
         if (curLvl === 6) {
-            // L7 maze: floor traps
-            for (var i = 0; i < l7traps.length; i++) {
-                var tr = l7traps[i];
-                if (tr.gone) {
-                    tr.respT += dt; if (tr.respT >= 3) { tr.gone = false; tr.respT = 0; tr.standT = 0; }
-                } else {
-                    // Check if player is standing on trap and not moving
-                    var onTrap = player.x + player.w > tr.x && player.x < tr.x + tr.w &&
-                        player.y + player.h >= tr.y && player.y + player.h <= tr.y + 6 && player.grounded;
-                    if (onTrap && Math.abs(player.vx) < 0.3) {
-                        tr.standT += dt;
-                        if (tr.standT >= 0.5) { tr.gone = true; tr.respT = 0; }
-                    } else { tr.standT = 0; }
+            // L7 DIKEN LABIRENT: spike trap state machine
+            for (var i = 0; i < l7spikeTraps.length; i++) {
+                var trap = l7spikeTraps[i];
+                var dx = Math.abs((player.x + player.w / 2) - (trap.x + 25));
+                trap.timer += dt;
+                switch (trap.state) {
+                    case 'idle':
+                        // Activate warning when player is within 150px horizontally
+                        if (dx < 150) { trap.state = 'warning'; trap.timer = 0; }
+                        break;
+                    case 'warning':
+                        // Flash for 1 second then fire spikes
+                        if (trap.timer >= 1.0) { trap.state = 'active'; trap.timer = 0; }
+                        break;
+                    case 'active':
+                        // Spikes are up for 1.5 seconds — kill player on contact
+                        var spikeRect = { x: trap.x - 5, y: trap.floorY - 40, w: 60, h: 40 };
+                        if (rectC(player, spikeRect)) { killP(); showTroll('DIKENI GORMEDIN MI? 🌵'); return; }
+                        if (trap.timer >= 1.5) { trap.state = 'cooldown'; trap.timer = 0; }
+                        break;
+                    case 'cooldown':
+                        if (trap.timer >= 2.0) { trap.state = 'idle'; trap.timer = 0; }
+                        break;
                 }
             }
-            // L7 troll: entering corridor 2 (player y > 100)
-            if (!l7trollC2 && calmTimer <= 0 && player.y > 105 && player.y < 170) {
-                l7trollC2 = true; showTroll('KOLAYLASTI DEGIL MI? 😊');
-                // Collapse a trap under them after short delay
-                setTimeout(function () {
-                    for (var i = 0; i < l7traps.length; i++) {
-                        var t = l7traps[i]; if (!t.gone && t.y === 160) { t.gone = true; t.respT = 0; break; }
-                    }
-                }, 800);
-            }
-            // L7 moving ceiling in corridor 3 (x=400-650, player enters corridor 3)
-            if (player.y > 195 && player.y < 260) {
-                if (!l7ceilMove && player.x > 350) { l7ceilMove = true; l7ceilTimer = 0; }
-                if (l7ceilMove) {
-                    l7ceilTimer += dt;
-                    // Ceiling moves down
-                    l7ceilY2 = 190 + Math.min(l7ceilTimer * 30, 55);
-                    // Troll at halfway
-                    if (!l7trollC3 && l7ceilTimer > 0.5) {
-                        l7trollC3 = true; showTroll('NEREDEYSE BITTI...');
-                        // Speed up ceiling after troll
-                    }
-                    if (l7trollC3) l7ceilY2 = 190 + Math.min(l7ceilTimer * 50, 55);
-                    // Crush check
-                    if (player.x > 400 && player.x < 650 && player.y < l7ceilY2 + 15) { killP(); return; }
-                    // Reset after 4 seconds
-                    if (l7ceilTimer > 4) { l7ceilMove = false; l7ceilY2 = 190; l7ceilTimer = 0; l7trollC3 = false; }
-                }
-            }
-            // L7 rising wall in corridor 4 (when player approaches flag)
-            if (player.y > 285 && player.y < 365) {
-                if (!l7wallUp && player.x < 200) {
-                    l7wallUp = true; l7trollC4 = true;
-                    showTroll('BURAYA KADAR 😈');
-                }
-                if (l7wallUp) {
-                    l7wallY = Math.max(l7wallY - dt * 120, 295);
-                    // Wall collision (rising wall at x=100, blocks path)
-                    var wall = { x: 100, y: l7wallY, w: 15, h: 370 - l7wallY };
-                    if (rectC(player, wall)) {
-                        if (player.vx < 0) { player.x = wall.x + wall.w; player.vx = 0; }
-                        else if (player.vx > 0) { player.x = wall.x - player.w; player.vx = 0; }
-                    }
-                    // Tiny gap at bottom (30px gap: wall goes from l7wallY to 340, floor at 370)
-                    // Player can crawl if shrunk
-                    if (player.y > 285 && player.x < 110 && !l7shrink) {
-                        l7shrink = true; player.h = 12; player.y = 370 - 12;
+            // TROLL 1: When player reaches x=400 in corridor 1, fire nearest spike early
+            if (!l7troll1 && player.y > 130 && player.y < 195 && player.x >= 400) {
+                l7troll1 = true;
+                showTroll('BU KADAR KOLAY MI? 😊');
+                // Fire the nearest corridor 1 spike 0.3s early
+                for (var i = 0; i < l7spikeTraps.length; i++) {
+                    var t = l7spikeTraps[i];
+                    if (t.corridor === 1 && t.state === 'idle') {
+                        t.state = 'warning'; t.timer = 0.7; // only 0.3s warning left
+                        break;
                     }
                 }
             }
-            // Restore player height when past wall
-            if (l7shrink && player.x < 95) { l7shrink = false; player.h = PH; }
-            // Floor trap collision (add as solids when not gone)
-            // Fake wall at x=50 in corridor 2: player can walk through
-            // (it's drawn but not in plats array)
+            // TROLL 2: When player enters corridor 3, show fake wall
+            if (!l7troll2 && player.y > 290 && player.y < 355) {
+                l7troll2 = true;
+                l7fakeWall = true;
+            }
+            // Fake wall collision (x=650, gap at bottom y=310..360 = 50px)
+            if (l7fakeWall) {
+                // Wall top part: y=280 to y=310 (blocks)
+                var wallTop = { x: 650, y: 280, w: 15, h: 30 };
+                if (rectC(player, wallTop)) {
+                    if (player.vx > 0) { player.x = wallTop.x - player.w; player.vx = 0; }
+                    else if (player.vx < 0) { player.x = wallTop.x + wallTop.w; player.vx = 0; }
+                }
+                // Player passed the wall
+                if (player.x > 665) {
+                    showTroll('BULDUN MU? 😈');
+                    l7fakeWall = false;
+                }
+            }
         }
         if (curLvl === 7 && !l8ceilDrop && player.x > 400 && calmTimer <= 0) { l8ceilDrop = true; yellowFlash(); showTroll(LTROLLS[7]); }
         if (curLvl === 7 && l8ceilDrop) { l8ceilY += dt * 300; if (l8ceilY > 50) l8ceilY = 50; }
@@ -629,8 +597,6 @@
     function getSolids() {
         var a = plats.slice();
         for (var i = 0; i < fakePlats.length; i++)if (fakePlats[i].op > 0.3) a.push(fakePlats[i]);
-        // L7 floor traps act as solids when not gone
-        if (curLvl === 6) { for (var i = 0; i < l7traps.length; i++) { if (!l7traps[i].gone) a.push(l7traps[i]); } }
         a = a.concat(movPlats); return a;
     }
     function colX() {
@@ -828,49 +794,56 @@
         // Spikes
         for (var i = 0; i < spikes.length; i++)drawSpike(spikes[i]);
         for (var i = 0; i < hidSpikes.length; i++)if (hidSpikes[i].active) drawSpike(hidSpikes[i]);
-        // L7 maze rendering
+        // L7 DIKEN LABIRENT rendering
         if (curLvl === 6) {
-            // Floor trap tiles (look like floor but with microscopic darker border)
-            for (var i = 0; i < l7traps.length; i++) {
-                var tr = l7traps[i];
-                if (!tr.gone) {
-                    drawPlat(tr, "#e87040", "#ff9960");
-                    // Microscopic darker border hint
-                    ctx.strokeStyle = "rgba(180,80,40,0.25)"; ctx.lineWidth = 1;
-                    ctx.strokeRect(tr.x + 0.5, tr.y + 0.5, tr.w - 1, tr.h - 1);
-                } else {
-                    // Fading effect when gone
-                    ctx.globalAlpha = Math.max(0, 0.3 - tr.respT * 0.1);
-                    drawPlat(tr, "#e87040", "#ff9960");
-                    ctx.globalAlpha = 1;
+            // Spike traps: warning dots, active spikes
+            for (var i = 0; i < l7spikeTraps.length; i++) {
+                var trap = l7spikeTraps[i];
+                var tx = trap.x, fy = trap.floorY;
+                if (trap.state === 'idle') {
+                    // Small warning dot (yellow)
+                    ctx.fillStyle = '#ffe600'; ctx.beginPath();
+                    ctx.arc(tx + 25, fy - 5, 5, 0, Math.PI * 2); ctx.fill();
+                } else if (trap.state === 'warning') {
+                    // Flashing red/yellow dot
+                    var flash = Math.floor(trap.timer * 12) % 2 === 0;
+                    ctx.fillStyle = flash ? '#dd2233' : '#ffe600'; ctx.beginPath();
+                    ctx.arc(tx + 25, fy - 5, 6, 0, Math.PI * 2); ctx.fill();
+                } else if (trap.state === 'active') {
+                    // 3 spike triangles shooting up from floor, 40px tall
+                    ctx.fillStyle = '#dd2233';
+                    for (var s = 0; s < 3; s++) {
+                        var sx = tx + s * 18;
+                        ctx.beginPath();
+                        ctx.moveTo(sx, fy);
+                        ctx.lineTo(sx + 8, fy - 40);
+                        ctx.lineTo(sx + 16, fy);
+                        ctx.fill();
+                    }
+                } else if (trap.state === 'cooldown') {
+                    // Small retracting dot (dim)
+                    ctx.fillStyle = 'rgba(255,230,0,0.4)'; ctx.beginPath();
+                    ctx.arc(tx + 25, fy - 3, 4, 0, Math.PI * 2); ctx.fill();
                 }
             }
-            // Fake wall in corridor 2 at x=50 (slightly different shade)
-            ctx.fillStyle = "#d56838"; ctx.beginPath(); ctx.roundRect(50, 175, 10, 15, 2); ctx.fill();
-            ctx.fillStyle = "#e87040"; ctx.fillRect(51, 175, 8, 2);
-            // Moving ceiling in corridor 3
-            if (l7ceilMove && l7ceilY2 > 190) {
-                ctx.fillStyle = "#d06030";
-                ctx.fillRect(400, 190, 250, l7ceilY2 - 190 + 15);
-                // Spikes on bottom of moving ceiling
-                for (var i = 0; i < 12; i++) {
-                    ctx.fillStyle = "#dd2233"; ctx.beginPath();
-                    ctx.moveTo(400 + i * 20, l7ceilY2 + 15);
-                    ctx.lineTo(410 + i * 20, l7ceilY2 + 25);
-                    ctx.lineTo(420 + i * 20, l7ceilY2 + 15); ctx.fill();
-                }
+            // Exit arrows (white chevrons)
+            ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = "bold 22px 'Fredoka One'";
+            ctx.textAlign = 'center';
+            // Corridor 1 exit: arrow pointing DOWN at right end
+            ctx.fillText('\u25BC', 775, 215); ctx.fillText('\u25BC', 775, 230);
+            // Corridor 2 exit: arrow pointing DOWN at left end
+            ctx.fillText('\u25BC', 30, 295); ctx.fillText('\u25BC', 30, 310);
+            ctx.textAlign = 'left';
+            // Fake wall in corridor 3 (troll 2)
+            if (l7fakeWall) {
+                // Wall from y=280 to y=310 (top part blocks)
+                ctx.fillStyle = '#d06030';
+                ctx.fillRect(650, 280, 15, 30);
+                // Gap from y=310 to y=360 (50px opening at bottom)
+                // Subtle hint: lighter color at gap
+                ctx.fillStyle = 'rgba(255,200,150,0.3)';
+                ctx.fillRect(650, 310, 15, 50);
             }
-            // Rising wall in corridor 4
-            if (l7wallUp && l7wallY < 370) {
-                ctx.fillStyle = "#d06030";
-                ctx.fillRect(100, l7wallY, 15, 370 - l7wallY);
-            }
-            // Subtle wrong-direction arrows
-            ctx.fillStyle = "rgba(0,180,0,0.12)"; ctx.font = "bold 28px 'Fredoka One'";
-            ctx.textAlign = "center";
-            ctx.fillText("\u2190 BURADAN", 100, 60); // points left in C1 (wrong, should go right)
-            ctx.fillText("\u2192 CIKIS", 700, 150); // points right in C2 (wrong, should go left)
-            ctx.textAlign = "left";
         }
         // L8 ceiling
         if (curLvl === 7 && l8ceilDrop && l8ceilY > 0) {
